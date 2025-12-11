@@ -1,43 +1,28 @@
 services:
-  ollama:
-    image: ollama/ollama  # Official Ollama image
-    container_name: freya_ollama
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
     ports:
-      - "11434:11434"  # Expose Ollama API
+      - "6333:6333"
     volumes:
-      - ollama_data:/root/.ollama  # Persist models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia  # Enable GPU
-              count: 1
-              capabilities: [gpu]
+      - qdrant_storage:/qdrant/storage
 
-  backend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: backend  # Build target stage
-    container_name: freya_backend
-    depends_on:
-      - ollama  # Wait for Ollama
-    volumes:
-      - .:/app  # Mount for dev hot-reload
-
-  ui:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: ui  # Build target stage
-    container_name: freya_ui
+  api:
+    build: ./api
+    container_name: ai-api
+    restart: unless-stopped
+    environment:
+      - OLLAMA_URL=http://host.docker.internal:11434   # change port if you run Ollama on a different port
+      - QDRANT_URL=http://qdrant:6333
+      - EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - QDRANT_COLLECTION=repo_docs
     ports:
-      - "8000:8000"  # Expose Chainlit UI
+      - "8000:8000"
     depends_on:
-      - backend
-      - ollama
-    volumes:
-      - .:/app  # Mount for dev hot-reload
+      - qdrant
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
-  ollama_data:  # Named volume for persistence
+  qdrant_storage:
