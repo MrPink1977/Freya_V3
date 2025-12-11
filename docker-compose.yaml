@@ -1,0 +1,43 @@
+services:
+  ollama:
+    image: ollama/ollama  # Official Ollama image
+    container_name: freya_ollama
+    ports:
+      - "11434:11434"  # Expose Ollama API
+    volumes:
+      - ollama_data:/root/.ollama  # Persist models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia  # Enable GPU
+              count: 1
+              capabilities: [gpu]
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: backend  # Build target stage
+    container_name: freya_backend
+    depends_on:
+      - ollama  # Wait for Ollama
+    volumes:
+      - .:/app  # Mount for dev hot-reload
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: ui  # Build target stage
+    container_name: freya_ui
+    ports:
+      - "8000:8000"  # Expose Chainlit UI
+    depends_on:
+      - backend
+      - ollama
+    volumes:
+      - .:/app  # Mount for dev hot-reload
+
+volumes:
+  ollama_data:  # Named volume for persistence

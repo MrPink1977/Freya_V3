@@ -1,0 +1,20 @@
+# Stage 1: Ollama base (not built here, but referenced)
+FROM ollama/ollama AS ollama
+
+# Stage 2: Base Python environment
+FROM python:3.11-slim AS base
+WORKDIR /app
+# Copy and install requirements first for caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+# Copy full project
+COPY . .
+
+# Stage 3: Backend service (placeholder; logic in UI for now)
+FROM base AS backend
+CMD ["python", "-m", "backend.agent"]  # Run agent module if needed standalone
+
+# Stage 4: UI service
+FROM base AS ui
+EXPOSE 8000
+CMD ["chainlit", "run", "ui/app.py", "--host", "0.0.0.0", "--port", "8000"]  # Start Chainlit server
